@@ -50,6 +50,8 @@ aside{background:linear-gradient(180deg,#0d0a24cc,#07060fcc)}
 body.busy .wave i{animation-duration:.45s}
 body.busy .ring{animation-duration:3s}
 .hud{font:.72rem ui-monospace,Menlo,Consolas,monospace;color:var(--dim);text-align:center;line-height:1.7}
+.keybtn{font:.8rem ui-monospace,Menlo,Consolas,monospace;color:var(--cyan);background:transparent;border:1px solid var(--cyan);padding:9px 16px;cursor:pointer;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}.keybtn:hover{background:#5eead41a}
+.keys{display:grid;gap:8px;justify-items:center}
 .hud b{color:var(--cyan);font-weight:400}
 @media(prefers-reduced-motion:reduce){.ring,.wave i{animation:none}}
 </style>
@@ -59,20 +61,95 @@ body.busy .ring{animation-duration:3s}
   <div class="orb" aria-hidden="true"><i class="ring r1"></i><i class="ring r2"></i><i class="ring r3"></i><div class="core" id="core"></div></div>
   <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   <h1>Synthia<small>V2.5 · Synthetic Heuristic Intelligence</small></h1>
-  <div class="hud"><b id="clock">--:--:--</b><br>uplink ready · lattice stable</div>
+  <div class="hud"><b id="clock">--:--:--</b><br>uplink ready · <span id="brain">reasoning core offline</span></div>
+  <div class="keys"><button class="keybtn" id="key-gemini" type="button">Connect Gemini</button><button class="keybtn" id="key-claude" type="button">Connect Claude</button></div>
   <ul class="sys"><li>Neural lattice</li><li>Empathic resonance layer</li><li>Chrono-memory</li><li>Web uplink</li></ul>
 </aside>
 <main>
   <div id="log" aria-live="polite"></div>
   <form id="f" autocomplete="off">
-    <input id="q" placeholder="Try /search quantum computing, /fetch wikipedia.org, or /help" aria-label="Message Synthia">
+    <input id="q" placeholder="Ask a question, name a topic, or paste a web address" aria-label="Message Synthia">
     <button class="send" type="submit">Send</button>
   </form>
 </main>
 <script>
 const log = document.getElementById("log"), core = document.getElementById("core");
 const PROXY = "https://api.allorigins.win/raw?url=";
-let lastPage = "", memory = [];
+let lastPage = "", memory = [], chat = [];
+const GEMINI_MODEL = "gemini-2.5-flash", CLAUDE_MODEL = "claude-sonnet-5-5";
+const NAMES = { claude: "Claude", gemini: "Gemini" };
+const PERSONA = "You are Synthia V2.5, a calm, precise, slightly playful futuristic AI companion. Answer questions the way a knowledgeable, honest assistant would: directly, accurately, and in full when the question needs it, with short answers for simple questions. Admit uncertainty rather than guessing. Reply in plain text only, with no markdown symbols, because the screen shows raw text.";
+const store = {
+  get: k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del: k => { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const keyOf = q => store.get("synthia_" + q + "_key");
+function provider() {
+  const p = store.get("synthia_provider");
+  if (p && keyOf(p)) return p;
+  return keyOf("claude") ? "claude" : keyOf("gemini") ? "gemini" : "";
+}
+const getKey = () => { const p = provider(); return p ? keyOf(p) : ""; };
+
+function refreshBrain() {
+  const p = provider();
+  document.getElementById("brain").textContent = p ? "reasoning core: " + NAMES[p] : "reasoning core offline";
+  for (const q of ["gemini", "claude"]) {
+    document.getElementById("key-" + q).textContent = !keyOf(q) ? "Connect " + NAMES[q] : p === q ? NAMES[q] + " active" : "Use " + NAMES[q];
+  }
+}
+function connect(q) {
+  if (keyOf(q) && provider() !== q) { store.set("synthia_provider", q); refreshBrain(); say(NAMES[q] + " is now my reasoning core."); return; }
+  const hint = q === "claude" ? "Paste your Anthropic API key (from console.anthropic.com)." : "Paste your Google Gemini API key (free from aistudio.google.com).";
+  const k = prompt(hint + " It is stored only in this browser and sent only to " + (q === "claude" ? "Anthropic" : "Google") + ".");
+  if (!k) return;
+  if (!store.set("synthia_" + q + "_key", k.trim())) { say("This browser would not let me store the key. Try opening the file in another browser."); return; }
+  store.set("synthia_provider", q); refreshBrain(); say(NAMES[q] + " connected. Ask me anything.");
+}
+
+// Claude answers with its built-in web search tool, so it can handle current events.
+async function callClaude(system) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": keyOf("claude"), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+    body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1500, system, messages: chat, tools: [{ type: "web_search_20250305", name: "web_search" }] })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(r.status === 401 ? "Anthropic rejected that key. Press Connect Claude to enter a new one" : (data.error && data.error.message) || "status " + r.status);
+  return data.content.filter(b => b.type === "text").map(b => b.text).join("") || "I searched but came back empty. Try rephrasing.";
+}
+
+async function callGemini(system) {
+  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-goog-api-key": keyOf("gemini") },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: chat.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+      generationConfig: { maxOutputTokens: 1500 }
+    })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(r.status === 400 || r.status === 403 ? "Google rejected the request, often a bad key. Use Connect Gemini to enter a new one (" + ((data.error && data.error.message) || r.status) + ")" : (data.error && data.error.message) || "status " + r.status);
+  const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+  if (!parts) throw new Error("Gemini returned no answer for that message, possibly blocked by its safety filters");
+  return parts.map(x => x.text || "").join("");
+}
+
+async function askBrain(text) {
+  chat.push({ role: "user", content: text });
+  chat = chat.slice(-20);
+  const p = provider();
+  const system = PERSONA
+    + (p === "claude" ? " You have a web search tool. Use it for news, current facts, or anything that may have changed." : " You cannot browse by yourself, but the interface can fetch pages for the user and show you their text.")
+    + (lastPage ? "\n\nThe user recently opened a page. Its text:\n" + lastPage : "");
+  let reply;
+  try { reply = p === "claude" ? await callClaude(system) : await callGemini(system); }
+  catch (e) { chat.pop(); throw e; }
+  chat.push({ role: "assistant", content: reply });
+  say(reply);
+}
 
 function add(cls, text) {
   const d = document.createElement("div");
@@ -85,7 +162,7 @@ function say(text) {
   const d = add("syn", ""), n = document.createTextNode("");
   d.prepend(n);
   let i = 0;
-  const tick = () => { i = Math.min(text.length, i + 3); n.data = text.slice(0, i); log.scrollTop = log.scrollHeight; if (i < text.length) setTimeout(tick, 14); };
+  const tick = () => { i = Math.min(text.length, i + Math.max(3, Math.ceil(text.length / 150))); n.data = text.slice(0, i); log.scrollTop = log.scrollHeight; if (i < text.length) setTimeout(tick, 14); };
   tick();
   return d;
 }
@@ -94,7 +171,7 @@ setInterval(() => { document.getElementById("clock").textContent = new Date().to
 async function boot() {
   const lines = ["Neural lattice … online", "Empathic resonance layer … online", "Chrono-memory … online", "Web uplink … online"];
   for (const l of lines) { add("sys-note", l); await new Promise(r => setTimeout(r, 300)); }
-  say("Synthia V2.5 online. Curiosity levels: elevated. What are we exploring?\n\nType /help to see what I can do.");
+  say("Synthia V2.5 online. Curiosity levels: elevated. What are we exploring?\n\nConnect Claude or Gemini to unlock full answers, or paste a web address. Type /help for tips.");
 }
 
 async function fetchPage(input) {
@@ -126,13 +203,14 @@ function localReply(t) {
   if (s.includes("summar") && lastPage) return "Here is the opening of the page I'm holding:\n\n" + lastPage.slice(0, 600) + "…";
   if (s.includes("thank")) return "Anytime. I ran a few extra approaches in the background, just in case.";
   if (memory.length > 2 && s.includes("remember")) return "So far you've said: " + memory.slice(-3).join(" / ");
-  return "I can search and read pages, but my reasoning core is offline in this version. Try /search <topic> or /fetch <url>.";
+  return "My reasoning core is offline, so I can only look things up. Connect Claude or Gemini with your API key to unlock full answers.";
 }
 
 async function handle(raw) {
   const [cmd, ...rest] = raw.split(" "), arg = rest.join(" ").trim();
-  if (cmd === "/help") return say("/search <query> finds articles\n/fetch <url> reads a page\n/clear wipes this screen\n\nAfter fetching, ask me to summarize it.");
-  if (cmd === "/clear") { log.innerHTML = ""; return; }
+  if (cmd === "/help") return say("Just talk to me naturally:\n• Ask a question or say \"look up black holes\" and I'll search.\n• Paste a web address and I'll read the page.\n• After a page loads, ask me to summarize it.\n\n/clear wipes this screen.");
+  if (cmd === "/clear") { log.innerHTML = ""; chat = []; return; }
+  if (cmd === "/forget-key") { ["synthia_gemini_key", "synthia_claude_key", "synthia_provider"].forEach(store.del); refreshBrain(); return say("All keys removed from this browser."); }
   if (cmd === "/search") {
     if (!arg) return say("Add a topic, like /search black holes.");
     const hits = await searchWeb(arg);
@@ -154,8 +232,31 @@ async function handle(raw) {
     lastPage = p.text;
     return say("Uplink established: " + p.title + "\n\n" + p.text.slice(0, 900) + "…");
   }
+  const intent = detect(raw);
+  if (getKey()) {
+    if (intent.type === "fetch") { const p = await fetchPage(intent.value); lastPage = p.text; say("Uplink established: " + p.title); }
+    return askBrain(raw);
+  }
+  if (intent.type === "fetch") return handle("/fetch " + intent.value);
+  if (intent.type === "search") return handle("/search " + intent.value);
   memory.push(raw);
   say(localReply(raw));
+}
+
+// Works out what you mean without needing a slash command.
+function detect(t) {
+  const urlRe = /((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/i;
+  const u = t.match(urlRe);
+  if (u && !/\s/.test(t.replace(u[0], "").trim().replace(/^(open|read|go to|visit|fetch|check|summari[sz]e)$/i, ""))) return { type: "fetch", value: u[1] };
+  if (u && /\b(open|read|go to|visit|fetch|check|summari[sz]e|what'?s on)\b/i.test(t)) return { type: "fetch", value: u[1] };
+  const s = t.trim();
+  if (/^(hi|hello|hey|thanks?|thank you|ok|okay|yes|no|bye)\b/i.test(s)) return {};
+  if (/\b(who are you|your name|summari[sz]e|remember)\b/i.test(s)) return {};
+  const pre = s.match(/^(?:please\s+)?(?:can you\s+)?(?:search(?: the web)?(?: for)?|look up|find(?: me)?|google|tell me about|learn about|research)\s+(.+)/i);
+  if (pre) return { type: "search", value: pre[1].replace(/[?.!]+$/, "") };
+  const q = s.match(/^(?:what|who|when|where|why|how|which|explain|define)\b(?:\s+(?:is|are|was|were|does|do|did|to|about))?\s*(?:an?|the)?\s*(.+)/i);
+  if (q) return { type: "search", value: q[1].replace(/[?.!]+$/, "") };
+  return {};
 }
 
 async function run(raw) {
@@ -171,6 +272,9 @@ document.getElementById("f").addEventListener("submit", e => {
   const v = q.value.trim(); q.value = "";
   if (v) run(v);
 });
+document.getElementById("key-gemini").onclick = () => connect("gemini");
+document.getElementById("key-claude").onclick = () => connect("claude");
+refreshBrain();
 boot();
 </script>
 </body>
