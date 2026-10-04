@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthia V2.5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07060f;--panel:#0f0d1d;--line:#2a2548;--text:#e8e6ff;--dim:#8d89b3;--violet:#a78bfa;--cyan:#5eead4;--pink:#f0abfc}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(1200px 700px at 20% 10%,#1a1340 0,var(--bg) 60%);color:var(--text);font-family:"Instrument Sans",system-ui,sans-serif;display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:0}
+aside{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:32px;border-right:1px solid var(--line)}
+h1{font-family:Orbitron,system-ui,sans-serif;font-weight:800;font-size:1.9rem;margin:0;letter-spacing:.06em;text-align:center;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 12px #a78bfa88)}
+h1 small{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:400;font-size:.7rem;color:var(--cyan);-webkit-text-fill-color:var(--cyan);letter-spacing:.04em;margin-top:8px;filter:none}
+.core{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0,var(--cyan) 14%,var(--violet) 48%,#2b1d6b 100%);box-shadow:0 0 50px 8px #a78bfa66,0 0 120px 30px #5eead433;animation:pulse 4.5s ease-in-out infinite}
+.core.busy{animation-duration:.9s}
+@keyframes pulse{50%{transform:scale(1.07);box-shadow:0 0 70px 14px #a78bfa88,0 0 150px 40px #5eead444}}
+.sys{list-style:none;padding:0;margin:0;font-size:.85rem;color:var(--dim);display:grid;gap:6px}
+.sys li::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cyan);margin-right:9px;box-shadow:0 0 8px var(--cyan)}
+main{display:flex;flex-direction:column;min-height:0;height:100vh;height:100dvh}
+#log{flex:1;overflow-y:auto;padding:28px clamp(16px,4vw,48px);display:flex;flex-direction:column;gap:14px}
+.msg{max-width:72ch;line-height:1.55;white-space:pre-wrap;word-wrap:break-word;padding:13px 20px;border:1px solid var(--line);clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+.syn{background:linear-gradient(135deg,#17133a,#0c0a1e);border-left:3px solid var(--cyan)}
+.me{align-self:flex-end;background:linear-gradient(135deg,#241a55,#1a1340);border-right:3px solid var(--pink)}
+.sys-note{color:var(--cyan);font:.78rem ui-monospace,Menlo,Consolas,monospace;border:0;padding:0 4px;clip-path:none;opacity:.8}.sys-note::before{content:"> "}
+.msg a,.link{color:var(--cyan);cursor:pointer;text-decoration:underline;background:none;border:0;font:inherit;padding:0;text-align:left}
+.res{display:block;margin:8px 0}
+.res span{display:block;color:var(--dim);font-size:.8rem}
+form{display:flex;gap:10px;padding:16px clamp(16px,4vw,48px) 22px;border-top:1px solid var(--line);background:#0a0817}
+input{flex:1;background:#0c0a1e;border:1px solid var(--line);border-bottom:2px solid var(--violet);color:var(--text);padding:13px 16px;border-radius:0;font:inherit;caret-color:var(--cyan)}
+input:focus,button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.send{clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);padding:0 28px!important;background:linear-gradient(135deg,var(--violet),var(--cyan));color:#07060f;font-weight:600;border:0;border-radius:12px;padding:0 22px;cursor:pointer;font:inherit;font-weight:600}
+@media(max-width:760px){.orb{width:72px;height:72px}.ring,.wave,.hud{display:none}body{grid-template-columns:1fr;grid-template-rows:auto 1fr}aside{flex-direction:row;padding:14px 18px;border-right:0;border-bottom:1px solid var(--line);gap:16px}.core{width:56px;height:56px}.sys{display:none}h1{font-size:1.4rem;text-align:left}main{height:auto;min-height:0}}
+@media(prefers-reduced-motion:reduce){.core{animation:none}}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(#a78bfa16 1px,transparent 1px),linear-gradient(90deg,#a78bfa16 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 30% 45%,#000 0,transparent 75%);mask-image:radial-gradient(ellipse at 30% 45%,#000 0,transparent 75%)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:5;background:repeating-linear-gradient(0deg,#0000 0 2px,#0000002e 2px 3px)}
+aside,main{position:relative;z-index:1}
+aside{background:linear-gradient(180deg,#0d0a24cc,#07060fcc)}
+.orb{position:relative;width:230px;height:230px;display:grid;place-items:center}
+.ring{position:absolute;border-radius:50%;border:1px solid #5eead433;border-top-color:var(--cyan);animation:spin 14s linear infinite}
+.r1{inset:0}.r2{inset:16px;border-color:#a78bfa33;border-top-color:var(--violet);animation-duration:9s;animation-direction:reverse}
+.r3{inset:36px;border-style:dashed;border-color:#f0abfc55;animation-duration:24s}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wave{display:flex;gap:4px;align-items:center;height:34px}
+.wave i{width:3px;height:20%;border-radius:2px;background:linear-gradient(var(--cyan),var(--violet));animation:bar 1.3s ease-in-out infinite}
+.wave i:nth-child(3n){animation-delay:-.4s}.wave i:nth-child(3n+1){animation-delay:-.9s}.wave i:nth-child(4n){animation-delay:-.2s}
+@keyframes bar{50%{height:100%}}
+body.busy .wave i{animation-duration:.45s}
+body.busy .ring{animation-duration:3s}
+.hud{font:.72rem ui-monospace,Menlo,Consolas,monospace;color:var(--dim);text-align:center;line-height:1.7}
+.keybtn{font:.8rem ui-monospace,Menlo,Consolas,monospace;color:var(--cyan);background:transparent;border:1px solid var(--cyan);padding:9px 16px;cursor:pointer;clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%)}.keybtn:hover{background:#5eead41a}
+.keys{display:grid;gap:8px;justify-items:center}
+.hud b{color:var(--cyan);font-weight:400}
+@media(prefers-reduced-motion:reduce){.ring,.wave i{animation:none}}
+</style>
+</head>
+<body>
+<aside>
+  <div class="orb" aria-hidden="true"><i class="ring r1"></i><i class="ring r2"></i><i class="ring r3"></i><div class="core" id="core"></div></div>
+  <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <h1>Synthia<small>V2.5 · Synthetic Heuristic Intelligence</small></h1>
+  <div class="hud"><b id="clock">--:--:--</b><br>uplink ready · <span id="brain">reasoning core offline</span></div>
+  <div class="keys"><button class="keybtn" id="key-gemini" type="button">Connect Gemini</button><button class="keybtn" id="key-claude" type="button">Connect Claude</button></div>
+  <ul class="sys"><li>Neural lattice</li><li>Empathic resonance layer</li><li>Chrono-memory</li><li>Web uplink</li></ul>
+</aside>
+<main>
+  <div id="log" aria-live="polite"></div>
+  <form id="f" autocomplete="off">
+    <input id="q" placeholder="Ask a question, name a topic, or paste a web address" aria-label="Message Synthia">
+    <button class="send" type="submit">Send</button>
+  </form>
+</main>
+<script>
+const log = document.getElementById("log"), core = document.getElementById("core");
+const PROXY = "https://api.allorigins.win/raw?url=";
+let lastPage = "", memory = [], chat = [];
+const GEMINI_MODEL = "gemini-2.5-flash", CLAUDE_MODEL = "claude-sonnet-5-5";
+const NAMES = { claude: "Claude", gemini: "Gemini" };
+const PERSONA = "You are Synthia V2.5, a calm, precise, slightly playful futuristic AI companion. Answer questions the way a knowledgeable, honest assistant would: directly, accurately, and in full when the question needs it, with short answers for simple questions. Admit uncertainty rather than guessing. Reply in plain text only, with no markdown symbols, because the screen shows raw text.";
+const store = {
+  get: k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del: k => { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const keyOf = q => store.get("synthia_" + q + "_key");
+function provider() {
+  const p = store.get("synthia_provider");
+  if (p && keyOf(p)) return p;
+  return keyOf("claude") ? "claude" : keyOf("gemini") ? "gemini" : "";
+}
+const getKey = () => { const p = provider(); return p ? keyOf(p) : ""; };
+
+function refreshBrain() {
+  const p = provider();
+  document.getElementById("brain").textContent = p ? "reasoning core: " + NAMES[p] : "reasoning core offline";
+  for (const q of ["gemini", "claude"]) {
+    document.getElementById("key-" + q).textContent = !keyOf(q) ? "Connect " + NAMES[q] : p === q ? NAMES[q] + " active" : "Use " + NAMES[q];
+  }
+}
+function connect(q) {
+  if (keyOf(q) && provider() !== q) { store.set("synthia_provider", q); refreshBrain(); say(NAMES[q] + " is now my reasoning core."); return; }
+  const hint = q === "claude" ? "Paste your Anthropic API key (from console.anthropic.com)." : "Paste your Google Gemini API key (free from aistudio.google.com).";
+  const k = prompt(hint + " It is stored only in this browser and sent only to " + (q === "claude" ? "Anthropic" : "Google") + ".");
+  if (!k) return;
+  if (!store.set("synthia_" + q + "_key", k.trim())) { say("This browser would not let me store the key. Try opening the file in another browser."); return; }
+  store.set("synthia_provider", q); refreshBrain(); say(NAMES[q] + " connected. Ask me anything.");
+}
+
+// Claude answers with its built-in web search tool, so it can handle current events.
+async function callClaude(system) {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": keyOf("claude"), "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+    body: JSON.stringify({ model: CLAUDE_MODEL, max_tokens: 1500, system, messages: chat, tools: [{ type: "web_search_20250305", name: "web_search" }] })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(r.status === 401 ? "Anthropic rejected that key. Press Connect Claude to enter a new one" : (data.error && data.error.message) || "status " + r.status);
+  return data.content.filter(b => b.type === "text").map(b => b.text).join("") || "I searched but came back empty. Try rephrasing.";
+}
+
+async function callGemini(system) {
+  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + GEMINI_MODEL + ":generateContent", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-goog-api-key": keyOf("gemini") },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: chat.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+      generationConfig: { maxOutputTokens: 1500 }
+    })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(r.status === 400 || r.status === 403 ? "Google rejected the request, often a bad key. Use Connect Gemini to enter a new one (" + ((data.error && data.error.message) || r.status) + ")" : (data.error && data.error.message) || "status " + r.status);
+  const parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+  if (!parts) throw new Error("Gemini returned no answer for that message, possibly blocked by its safety filters");
+  return parts.map(x => x.text || "").join("");
+}
+
+async function askBrain(text) {
+  chat.push({ role: "user", content: text });
+  chat = chat.slice(-20);
+  const p = provider();
+  const system = PERSONA
+    + (p === "claude" ? " You have a web search tool. Use it for news, current facts, or anything that may have changed." : " You cannot browse by yourself, but the interface can fetch pages for the user and show you their text.")
+    + (lastPage ? "\n\nThe user recently opened a page. Its text:\n" + lastPage : "");
+  let reply;
+  try { reply = p === "claude" ? await callClaude(system) : await callGemini(system); }
+  catch (e) { chat.pop(); throw e; }
+  chat.push({ role: "assistant", content: reply });
+  say(reply);
+}
+
+function add(cls, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  if (text) d.textContent = text;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+  return d;
+}
+function say(text) {
+  const d = add("syn", ""), n = document.createTextNode("");
+  d.prepend(n);
+  let i = 0;
+  const tick = () => { i = Math.min(text.length, i + Math.max(3, Math.ceil(text.length / 150))); n.data = text.slice(0, i); log.scrollTop = log.scrollHeight; if (i < text.length) setTimeout(tick, 14); };
+  tick();
+  return d;
+}
+setInterval(() => { document.getElementById("clock").textContent = new Date().toLocaleTimeString([], {hour12:false}); }, 1000);
+
+async function boot() {
+  const lines = ["Neural lattice … online", "Empathic resonance layer … online", "Chrono-memory … online", "Web uplink … online"];
+  for (const l of lines) { add("sys-note", l); await new Promise(r => setTimeout(r, 300)); }
+  say("Synthia V2.5 online. Curiosity levels: elevated. What are we exploring?\n\nConnect Claude or Gemini to unlock full answers, or paste a web address. Type /help for tips.");
+}
+
+async function fetchPage(input) {
+  let url = input.trim();
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+  const r = await fetch(PROXY + encodeURIComponent(url));
+  if (!r.ok) throw new Error("the site answered with status " + r.status);
+  const doc = new DOMParser().parseFromString(await r.text(), "text/html");
+  doc.querySelectorAll("script,style,nav,footer,noscript").forEach(n => n.remove());
+  const title = (doc.title || url).trim();
+  const text = (doc.body ? doc.body.textContent : "").replace(/\s+/g, " ").trim();
+  return { title, url, text: text.slice(0, 6000) };
+}
+
+async function searchWeb(query) {
+  const u = "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=5&srsearch=" + encodeURIComponent(query);
+  const data = await (await fetch(u)).json();
+  return data.query.search.map(s => ({
+    title: s.title,
+    url: "https://en.wikipedia.org/wiki/" + encodeURIComponent(s.title.replace(/ /g, "_")),
+    snippet: s.snippet.replace(/<[^>]+>/g, "")
+  }));
+}
+
+function localReply(t) {
+  const s = t.toLowerCase();
+  if (/^(hi|hello|hey)\b/.test(s)) return "Hello. Good to see you. What are we building today?";
+  if (s.includes("who are you") || s.includes("your name")) return "I'm Synthia V2.5, a companion intelligence for exploring ideas and the web.";
+  if (s.includes("summar") && lastPage) return "Here is the opening of the page I'm holding:\n\n" + lastPage.slice(0, 600) + "…";
+  if (s.includes("thank")) return "Anytime. I ran a few extra approaches in the background, just in case.";
+  if (memory.length > 2 && s.includes("remember")) return "So far you've said: " + memory.slice(-3).join(" / ");
+  return "My reasoning core is offline, so I can only look things up. Connect Claude or Gemini with your API key to unlock full answers.";
+}
+
+async function handle(raw) {
+  const [cmd, ...rest] = raw.split(" "), arg = rest.join(" ").trim();
+  if (cmd === "/help") return say("Just talk to me naturally:\n• Ask a question or say \"look up black holes\" and I'll search.\n• Paste a web address and I'll read the page.\n• After a page loads, ask me to summarize it.\n\n/clear wipes this screen.");
+  if (cmd === "/clear") { log.innerHTML = ""; chat = []; return; }
+  if (cmd === "/forget-key") { ["synthia_gemini_key", "synthia_claude_key", "synthia_provider"].forEach(store.del); refreshBrain(); return say("All keys removed from this browser."); }
+  if (cmd === "/search") {
+    if (!arg) return say("Add a topic, like /search black holes.");
+    const hits = await searchWeb(arg);
+    if (!hits.length) return say("No results for that. Try different words.");
+    const d = say("Top matches:");
+    hits.forEach(h => {
+      const b = document.createElement("button");
+      b.className = "link res"; b.type = "button";
+      b.innerHTML = ""; b.append(h.title);
+      const sp = document.createElement("span"); sp.textContent = h.snippet; b.appendChild(sp);
+      b.onclick = () => run("/fetch " + h.url);
+      d.appendChild(b);
+    });
+    return;
+  }
+  if (cmd === "/fetch") {
+    if (!arg) return say("Add a URL, like /fetch example.com.");
+    const p = await fetchPage(arg);
+    lastPage = p.text;
+    return say("Uplink established: " + p.title + "\n\n" + p.text.slice(0, 900) + "…");
+  }
+  const intent = detect(raw);
+  if (getKey()) {
+    if (intent.type === "fetch") { const p = await fetchPage(intent.value); lastPage = p.text; say("Uplink established: " + p.title); }
+    return askBrain(raw);
+  }
+  if (intent.type === "fetch") return handle("/fetch " + intent.value);
+  if (intent.type === "search") return handle("/search " + intent.value);
+  memory.push(raw);
+  say(localReply(raw));
+}
+
+// Works out what you mean without needing a slash command.
+function detect(t) {
+  const urlRe = /((?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?)/i;
+  const u = t.match(urlRe);
+  if (u && !/\s/.test(t.replace(u[0], "").trim().replace(/^(open|read|go to|visit|fetch|check|summari[sz]e)$/i, ""))) return { type: "fetch", value: u[1] };
+  if (u && /\b(open|read|go to|visit|fetch|check|summari[sz]e|what'?s on)\b/i.test(t)) return { type: "fetch", value: u[1] };
+  const s = t.trim();
+  if (/^(hi|hello|hey|thanks?|thank you|ok|okay|yes|no|bye)\b/i.test(s)) return {};
+  if (/\b(who are you|your name|summari[sz]e|remember)\b/i.test(s)) return {};
+  const pre = s.match(/^(?:please\s+)?(?:can you\s+)?(?:search(?: the web)?(?: for)?|look up|find(?: me)?|google|tell me about|learn about|research)\s+(.+)/i);
+  if (pre) return { type: "search", value: pre[1].replace(/[?.!]+$/, "") };
+  const q = s.match(/^(?:what|who|when|where|why|how|which|explain|define)\b(?:\s+(?:is|are|was|were|does|do|did|to|about))?\s*(?:an?|the)?\s*(.+)/i);
+  if (q) return { type: "search", value: q[1].replace(/[?.!]+$/, "") };
+  return {};
+}
+
+async function run(raw) {
+  add("me", raw); document.body.classList.add("busy");
+  try { await handle(raw); }
+  catch (e) { say("The uplink hit turbulence: " + e.message + ". Check the address, or try another site."); }
+  document.body.classList.remove("busy");
+}
+
+document.getElementById("f").addEventListener("submit", e => {
+  e.preventDefault();
+  const q = document.getElementById("q");
+  const v = q.value.trim(); q.value = "";
+  if (v) run(v);
+});
+document.getElementById("key-gemini").onclick = () => connect("gemini");
+document.getElementById("key-claude").onclick = () => connect("claude");
+refreshBrain();
+boot();
+</script>
+</body>
+</html>
