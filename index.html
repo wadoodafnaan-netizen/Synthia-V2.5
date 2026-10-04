@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthia V2.5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Instrument+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#07060f;--panel:#0f0d1d;--line:#2a2548;--text:#e8e6ff;--dim:#8d89b3;--violet:#a78bfa;--cyan:#5eead4;--pink:#f0abfc}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(1200px 700px at 20% 10%,#1a1340 0,var(--bg) 60%);color:var(--text);font-family:"Instrument Sans",system-ui,sans-serif;display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:0}
+aside{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:32px;border-right:1px solid var(--line)}
+h1{font-family:Orbitron,system-ui,sans-serif;font-weight:800;font-size:1.9rem;margin:0;letter-spacing:.06em;text-align:center;background:linear-gradient(90deg,var(--cyan),var(--violet),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 12px #a78bfa88)}
+h1 small{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:400;font-size:.7rem;color:var(--cyan);-webkit-text-fill-color:var(--cyan);letter-spacing:.04em;margin-top:8px;filter:none}
+.core{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0,var(--cyan) 14%,var(--violet) 48%,#2b1d6b 100%);box-shadow:0 0 50px 8px #a78bfa66,0 0 120px 30px #5eead433;animation:pulse 4.5s ease-in-out infinite}
+.core.busy{animation-duration:.9s}
+@keyframes pulse{50%{transform:scale(1.07);box-shadow:0 0 70px 14px #a78bfa88,0 0 150px 40px #5eead444}}
+.sys{list-style:none;padding:0;margin:0;font-size:.85rem;color:var(--dim);display:grid;gap:6px}
+.sys li::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--cyan);margin-right:9px;box-shadow:0 0 8px var(--cyan)}
+main{display:flex;flex-direction:column;min-height:0;height:100vh;height:100dvh}
+#log{flex:1;overflow-y:auto;padding:28px clamp(16px,4vw,48px);display:flex;flex-direction:column;gap:14px}
+.msg{max-width:72ch;line-height:1.55;white-space:pre-wrap;word-wrap:break-word;padding:13px 20px;border:1px solid var(--line);clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+.syn{background:linear-gradient(135deg,#17133a,#0c0a1e);border-left:3px solid var(--cyan)}
+.me{align-self:flex-end;background:linear-gradient(135deg,#241a55,#1a1340);border-right:3px solid var(--pink)}
+.sys-note{color:var(--cyan);font:.78rem ui-monospace,Menlo,Consolas,monospace;border:0;padding:0 4px;clip-path:none;opacity:.8}.sys-note::before{content:"> "}
+.msg a,.link{color:var(--cyan);cursor:pointer;text-decoration:underline;background:none;border:0;font:inherit;padding:0;text-align:left}
+.res{display:block;margin:8px 0}
+.res span{display:block;color:var(--dim);font-size:.8rem}
+form{display:flex;gap:10px;padding:16px clamp(16px,4vw,48px) 22px;border-top:1px solid var(--line);background:#0a0817}
+input{flex:1;background:#0c0a1e;border:1px solid var(--line);border-bottom:2px solid var(--violet);color:var(--text);padding:13px 16px;border-radius:0;font:inherit;caret-color:var(--cyan)}
+input:focus,button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.send{clip-path:polygon(12px 0,100% 0,calc(100% - 12px) 100%,0 100%);padding:0 28px!important;background:linear-gradient(135deg,var(--violet),var(--cyan));color:#07060f;font-weight:600;border:0;border-radius:12px;padding:0 22px;cursor:pointer;font:inherit;font-weight:600}
+@media(max-width:760px){.orb{width:72px;height:72px}.ring,.wave,.hud{display:none}body{grid-template-columns:1fr;grid-template-rows:auto 1fr}aside{flex-direction:row;padding:14px 18px;border-right:0;border-bottom:1px solid var(--line);gap:16px}.core{width:56px;height:56px}.sys{display:none}h1{font-size:1.4rem;text-align:left}main{height:auto;min-height:0}}
+@media(prefers-reduced-motion:reduce){.core{animation:none}}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(#a78bfa16 1px,transparent 1px),linear-gradient(90deg,#a78bfa16 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 30% 45%,#000 0,transparent 75%);mask-image:radial-gradient(ellipse at 30% 45%,#000 0,transparent 75%)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:5;background:repeating-linear-gradient(0deg,#0000 0 2px,#0000002e 2px 3px)}
+aside,main{position:relative;z-index:1}
+aside{background:linear-gradient(180deg,#0d0a24cc,#07060fcc)}
+.orb{position:relative;width:230px;height:230px;display:grid;place-items:center}
+.ring{position:absolute;border-radius:50%;border:1px solid #5eead433;border-top-color:var(--cyan);animation:spin 14s linear infinite}
+.r1{inset:0}.r2{inset:16px;border-color:#a78bfa33;border-top-color:var(--violet);animation-duration:9s;animation-direction:reverse}
+.r3{inset:36px;border-style:dashed;border-color:#f0abfc55;animation-duration:24s}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wave{display:flex;gap:4px;align-items:center;height:34px}
+.wave i{width:3px;height:20%;border-radius:2px;background:linear-gradient(var(--cyan),var(--violet));animation:bar 1.3s ease-in-out infinite}
+.wave i:nth-child(3n){animation-delay:-.4s}.wave i:nth-child(3n+1){animation-delay:-.9s}.wave i:nth-child(4n){animation-delay:-.2s}
+@keyframes bar{50%{height:100%}}
+body.busy .wave i{animation-duration:.45s}
+body.busy .ring{animation-duration:3s}
+.hud{font:.72rem ui-monospace,Menlo,Consolas,monospace;color:var(--dim);text-align:center;line-height:1.7}
+.hud b{color:var(--cyan);font-weight:400}
+@media(prefers-reduced-motion:reduce){.ring,.wave i{animation:none}}
+</style>
+</head>
+<body>
+<aside>
+  <div class="orb" aria-hidden="true"><i class="ring r1"></i><i class="ring r2"></i><i class="ring r3"></i><div class="core" id="core"></div></div>
+  <div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <h1>Synthia<small>V2.5 · Synthetic Heuristic Intelligence</small></h1>
+  <div class="hud"><b id="clock">--:--:--</b><br>uplink ready · lattice stable</div>
+  <ul class="sys"><li>Neural lattice</li><li>Empathic resonance layer</li><li>Chrono-memory</li><li>Web uplink</li></ul>
+</aside>
+<main>
+  <div id="log" aria-live="polite"></div>
+  <form id="f" autocomplete="off">
+    <input id="q" placeholder="Try /search quantum computing, /fetch wikipedia.org, or /help" aria-label="Message Synthia">
+    <button class="send" type="submit">Send</button>
+  </form>
+</main>
+<script>
+const log = document.getElementById("log"), core = document.getElementById("core");
+const PROXY = "https://api.allorigins.win/raw?url=";
+let lastPage = "", memory = [];
+
+function add(cls, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + cls;
+  if (text) d.textContent = text;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+  return d;
+}
+function say(text) {
+  const d = add("syn", ""), n = document.createTextNode("");
+  d.prepend(n);
+  let i = 0;
+  const tick = () => { i = Math.min(text.length, i + 3); n.data = text.slice(0, i); log.scrollTop = log.scrollHeight; if (i < text.length) setTimeout(tick, 14); };
+  tick();
+  return d;
+}
+setInterval(() => { document.getElementById("clock").textContent = new Date().toLocaleTimeString([], {hour12:false}); }, 1000);
+
+async function boot() {
+  const lines = ["Neural lattice … online", "Empathic resonance layer … online", "Chrono-memory … online", "Web uplink … online"];
+  for (const l of lines) { add("sys-note", l); await new Promise(r => setTimeout(r, 300)); }
+  say("Synthia V2.5 online. Curiosity levels: elevated. What are we exploring?\n\nType /help to see what I can do.");
+}
+
+async function fetchPage(input) {
+  let url = input.trim();
+  if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+  const r = await fetch(PROXY + encodeURIComponent(url));
+  if (!r.ok) throw new Error("the site answered with status " + r.status);
+  const doc = new DOMParser().parseFromString(await r.text(), "text/html");
+  doc.querySelectorAll("script,style,nav,footer,noscript").forEach(n => n.remove());
+  const title = (doc.title || url).trim();
+  const text = (doc.body ? doc.body.textContent : "").replace(/\s+/g, " ").trim();
+  return { title, url, text: text.slice(0, 6000) };
+}
+
+async function searchWeb(query) {
+  const u = "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=5&srsearch=" + encodeURIComponent(query);
+  const data = await (await fetch(u)).json();
+  return data.query.search.map(s => ({
+    title: s.title,
+    url: "https://en.wikipedia.org/wiki/" + encodeURIComponent(s.title.replace(/ /g, "_")),
+    snippet: s.snippet.replace(/<[^>]+>/g, "")
+  }));
+}
+
+function localReply(t) {
+  const s = t.toLowerCase();
+  if (/^(hi|hello|hey)\b/.test(s)) return "Hello. Good to see you. What are we building today?";
+  if (s.includes("who are you") || s.includes("your name")) return "I'm Synthia V2.5, a companion intelligence for exploring ideas and the web.";
+  if (s.includes("summar") && lastPage) return "Here is the opening of the page I'm holding:\n\n" + lastPage.slice(0, 600) + "…";
+  if (s.includes("thank")) return "Anytime. I ran a few extra approaches in the background, just in case.";
+  if (memory.length > 2 && s.includes("remember")) return "So far you've said: " + memory.slice(-3).join(" / ");
+  return "I can search and read pages, but my reasoning core is offline in this version. Try /search <topic> or /fetch <url>.";
+}
+
+async function handle(raw) {
+  const [cmd, ...rest] = raw.split(" "), arg = rest.join(" ").trim();
+  if (cmd === "/help") return say("/search <query> finds articles\n/fetch <url> reads a page\n/clear wipes this screen\n\nAfter fetching, ask me to summarize it.");
+  if (cmd === "/clear") { log.innerHTML = ""; return; }
+  if (cmd === "/search") {
+    if (!arg) return say("Add a topic, like /search black holes.");
+    const hits = await searchWeb(arg);
+    if (!hits.length) return say("No results for that. Try different words.");
+    const d = say("Top matches:");
+    hits.forEach(h => {
+      const b = document.createElement("button");
+      b.className = "link res"; b.type = "button";
+      b.innerHTML = ""; b.append(h.title);
+      const sp = document.createElement("span"); sp.textContent = h.snippet; b.appendChild(sp);
+      b.onclick = () => run("/fetch " + h.url);
+      d.appendChild(b);
+    });
+    return;
+  }
+  if (cmd === "/fetch") {
+    if (!arg) return say("Add a URL, like /fetch example.com.");
+    const p = await fetchPage(arg);
+    lastPage = p.text;
+    return say("Uplink established: " + p.title + "\n\n" + p.text.slice(0, 900) + "…");
+  }
+  memory.push(raw);
+  say(localReply(raw));
+}
+
+async function run(raw) {
+  add("me", raw); document.body.classList.add("busy");
+  try { await handle(raw); }
+  catch (e) { say("The uplink hit turbulence: " + e.message + ". Check the address, or try another site."); }
+  document.body.classList.remove("busy");
+}
+
+document.getElementById("f").addEventListener("submit", e => {
+  e.preventDefault();
+  const q = document.getElementById("q");
+  const v = q.value.trim(); q.value = "";
+  if (v) run(v);
+});
+boot();
+</script>
+</body>
+</html>
